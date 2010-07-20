@@ -672,6 +672,23 @@ Adapted from: `rm-highlight-rectangle' in rect-mark.el."
        nil (and (eq vimpulse-visual-mode 'line)
                 (not (vimpulse-needs-newline-p this-command))))))))
 
+(defun vimpulse-convert-emacs-selection-to-visual-selection ()
+  (cond
+   ;; if entire lines were selected, switch to line-selection mode
+   ((and (= (region-beginning) (save-excursion (goto-char (region-beginning)) (beginning-of-line) (point)))
+         (= (region-end)       (save-excursion (goto-char (region-end))       (beginning-of-line) (point))))
+    (when (= (point) (region-end)) (previous-line))
+    (vimpulse-visual-activate 'line)
+    (vimpulse-visual-highlight))
+
+   ;; if invoking an emacs command that selects a thing, such as an sexp, and leaves the cursor on the right side, adjust so you don't effectively end up selecting 1 additional character
+   ((= (point) (region-end))
+    (backward-char)
+    (vimpulse-visual-mode 1))
+
+   (t
+    (vimpulse-visual-mode 1))))
+
 (defun vimpulse-visual-post-command ()
   "Run after each command in Visual mode."
   (cond
@@ -700,7 +717,7 @@ Adapted from: `rm-highlight-rectangle' in rect-mark.el."
    ((and (region-active-p)
          (eq viper-current-state 'vi-state)
          (if (boundp 'deactivate-mark) (not deactivate-mark) t))
-    (vimpulse-visual-mode 1))))
+    (vimpulse-convert-emacs-selection-to-visual-selection))))
 
 (defun vimpulse-visual-deactivate-hook ()
   "Hook run when mark is deactivated in Visual mode."
